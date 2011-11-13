@@ -32,7 +32,9 @@ import java.util.Set;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 
+import com.force.sdk.codegen.AbstractCodeGenerator;
 import com.force.sdk.codegen.ForceJPAClassGenerator;
+import com.force.sdk.codegen.ForceJacksonJSONClassGenerator;
 import com.force.sdk.codegen.filter.FieldCombinationFilter;
 import com.force.sdk.codegen.filter.FieldReferenceFilter;
 import com.force.sdk.codegen.filter.ObjectCombinationFilter;
@@ -100,6 +102,12 @@ public class CodeGenMojo extends AbstractMojo {
      * @parameter expression="${skipForceCodeGen}" default-value=false
      */
     private boolean skip;
+
+    /**
+     * Codegen type: json or jpa
+     * @parameter expression="${force.codegen.type}"
+     */
+    private String type;
     
     /**
      * {@inheritDoc}
@@ -121,17 +129,24 @@ public class CodeGenMojo extends AbstractMojo {
         } catch (Exception e) {
             throw new MojoExecutionException("Unable to establish connection to Force.com", e);
         }
+        AbstractCodeGenerator generator;
         
-        ForceJPAClassGenerator generator = new ForceJPAClassGenerator();
+        if(type!=null && type.equals("json")) {
+        	getLog().info("Using JSON generator");
+        	generator = new ForceJacksonJSONClassGenerator();
+        } else {
+        	getLog().info("Using JPA generator");
+        	generator = new ForceJPAClassGenerator();
+        }
         generator.setPackageName(packageName);
         if (!initFilters(generator)) return;
         
         int numGeneratedFiles;
         try {
-            getLog().info("Generating Force.com JPA classes in " + destDir);
+            getLog().info("Generating Force.com classes in " + destDir);
             numGeneratedFiles = generator.generateCode(conn, destDir);
         } catch (Exception e) {
-            getLog().error("Unable to generate JPA classes", e);
+            getLog().error("Unable to generate classes", e);
             return;
         }
         
@@ -143,7 +158,7 @@ public class CodeGenMojo extends AbstractMojo {
         return new ForceServiceConnector(connectionName);
     }
     
-    boolean initFilters(ForceJPAClassGenerator generator) {
+    boolean initFilters(AbstractCodeGenerator generator) {
         
         getLog().debug("Setting up code generation filters");
         if (all) {
@@ -171,7 +186,7 @@ public class CodeGenMojo extends AbstractMojo {
             }
             
             if (objectFilter.getFilterList().isEmpty()) {
-                getLog().warn("No JPA classes generated. Please specify the schema object names or use -Dforce.codegen.all");
+                getLog().warn("No classes generated. Please specify the schema object names or use -Dforce.codegen.all");
                 return false;
             }
             
