@@ -1,3 +1,0 @@
-[submodule "java-sdk"]
-	path = java-sdk
-	url = git@github.com:jesperfj/java-sdk.git
